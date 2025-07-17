@@ -6,6 +6,7 @@ from streamlit_folium import st_folium
 from io import BytesIO
 import networkx as nx
 import urllib.parse
+import re
 
 def total_distance(route, coords):
     return sum(geodesic(coords[route[i]], coords[route[i+1]]).meters for i in range(len(route)-1)) + geodesic(coords[route[-1]], coords[route[0]]).meters
@@ -65,18 +66,42 @@ with col1:
         ("최근접 이웃(Nearest Neighbor)", "2-opt", "Christofides"),
         index=2
     )
-    uploaded_file = st.file_uploader("엑셀 파일을 업로드하세요", type=["xlsx"])
+    data_source = st.radio("데이터 소스 선택", ("엑셀 업로드", "구글 시트 URL"), horizontal=True)
+    uploaded_file = None
+    sheet_url = None
+    if data_source == "엑셀 업로드":
+        uploaded_file = st.file_uploader("엑셀 파일을 업로드하세요", type=["xlsx"])
+    else:
+        sheet_url = st.text_input("구글 시트 URL을 입력하세요 (공개 시트)")
 
 with col2:
     map_placeholder = st.empty()
 
-if uploaded_file:
+# 데이터프레임 불러오기
+if data_source == "엑셀 업로드" and uploaded_file:
     df = pd.read_excel(uploaded_file)
+elif data_source == "구글 시트 URL" and sheet_url:
+    match = re.match(r"https://docs.google.com/spreadsheets/d/([a-zA-Z0-9-_]+)", sheet_url)
+    if match:
+        sheet_id = match.group(1)
+        csv_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv"
+        try:
+            df = pd.read_csv(csv_url)
+        except Exception as e:
+            st.error(f"구글 시트에서 데이터를 불러올 수 없습니다: {e}")
+            df = None
+    else:
+        st.error("유효한 구글 시트 URL을 입력하세요.")
+        df = None
+else:
+    df = None
+
+if df is not None:
     # '폐업여부' 컬럼이 있으면 Y가 아닌 데이터만 사용
     if '폐업여부' in df.columns:
         df = df[df['폐업여부'] != 'Y']
     if not all(col in df.columns for col in ['상호명', '도로명주소', '위도', '경도']):
-        st.error("엑셀 파일에 '상호명', '도로명주소', '위도', '경도' 컬럼이 필요합니다.")
+        st.error("데이터에 '상호명', '도로명주소', '위도', '경도' 컬럼이 필요합니다.")
         st.stop()
 
     locations = df[['상호명', '도로명주소', '위도', '경도']].dropna().reset_index(drop=True)
