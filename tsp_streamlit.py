@@ -57,13 +57,17 @@ st.title("TSP 최적 경로 계산기 (알고리즘 선택, 지도 시각화 포
 
 algorithm = st.selectbox(
     "사용할 알고리즘을 선택하세요",
-    ("최근접 이웃(Nearest Neighbor)", "2-opt", "Christofides")
+    ("최근접 이웃(Nearest Neighbor)", "2-opt", "Christofides"),
+    index=2
 )
 
 uploaded_file = st.file_uploader("엑셀 파일을 업로드하세요", type=["xlsx"])
 
 if uploaded_file:
     df = pd.read_excel(uploaded_file)
+    # '폐업여부' 컬럼이 있으면 Y가 아닌 데이터만 사용
+    if '폐업여부' in df.columns:
+        df = df[df['폐업여부'] != 'Y']
     if not all(col in df.columns for col in ['상호명', '도로명주소', '위도', '경도']):
         st.error("엑셀 파일에 '상호명', '도로명주소', '위도', '경도' 컬럼이 필요합니다.")
         st.stop()
