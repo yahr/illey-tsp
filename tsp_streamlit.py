@@ -7,6 +7,8 @@ from io import BytesIO
 import networkx as nx
 import urllib.parse
 import re
+import requests
+import json
 
 def total_distance(route, coords):
     return sum(geodesic(coords[route[i]], coords[route[i+1]]).meters for i in range(len(route)-1)) + geodesic(coords[route[-1]], coords[route[0]]).meters
@@ -73,6 +75,7 @@ with col1:
         uploaded_file = st.file_uploader("엑셀 파일을 업로드하세요", type=["xlsx"])
     else:
         sheet_url = st.text_input("구글 시트 URL을 입력하세요 (공개 시트)")
+        gid = st.text_input("시트 GID를 입력하세요 (주소창 gid=... 값)")
 
 with col2:
     map_placeholder = st.empty()
@@ -80,11 +83,11 @@ with col2:
 # 데이터프레임 불러오기
 if data_source == "엑셀 업로드" and uploaded_file:
     df = pd.read_excel(uploaded_file)
-elif data_source == "구글 시트 URL" and sheet_url:
+elif data_source == "구글 시트 URL" and sheet_url and gid:
     match = re.match(r"https://docs.google.com/spreadsheets/d/([a-zA-Z0-9-_]+)", sheet_url)
     if match:
         sheet_id = match.group(1)
-        csv_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv"
+        csv_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid={gid}"
         try:
             df = pd.read_csv(csv_url)
         except Exception as e:
