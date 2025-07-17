@@ -53,15 +53,22 @@ def christofides_tsp(coords):
     )
     return cycle
 
+st.set_page_config(layout="wide")
+
 st.title("TSP 최적 경로 계산기 (알고리즘 선택, 지도 시각화 포함)")
 
-algorithm = st.selectbox(
-    "사용할 알고리즘을 선택하세요",
-    ("최근접 이웃(Nearest Neighbor)", "2-opt", "Christofides"),
-    index=2
-)
+col1, col2 = st.columns([1, 2])
 
-uploaded_file = st.file_uploader("엑셀 파일을 업로드하세요", type=["xlsx"])
+with col1:
+    algorithm = st.selectbox(
+        "사용할 알고리즘을 선택하세요",
+        ("최근접 이웃(Nearest Neighbor)", "2-opt", "Christofides"),
+        index=2
+    )
+    uploaded_file = st.file_uploader("엑셀 파일을 업로드하세요", type=["xlsx"])
+
+with col2:
+    map_placeholder = st.empty()
 
 if uploaded_file:
     df = pd.read_excel(uploaded_file)
@@ -114,7 +121,8 @@ if uploaded_file:
     route_coords = [coords[i] for i in route_order]
     route_coords.append(coords[route_order[0]])
     folium.PolyLine(route_coords, color="blue", weight=2.5, opacity=1).add_to(m)
-    st_folium(m, width=1600, height=900)
+    with col2:
+        st_folium(m, width=1600, height=900)
 
     # 결과 엑셀 다운로드
     output = BytesIO()
@@ -122,10 +130,11 @@ if uploaded_file:
     result_df.insert(0, '방문 순서', "")
     for i, idx in enumerate(route_order):
         result_df.at[idx, '방문 순서'] = i+1
-    result_df.to_excel(output, index=False)
-    st.download_button(
-        label="최적 경로 엑셀 다운로드",
-        data=output.getvalue(),
-        file_name=f"최적경로결과_{file_suffix}.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    ) 
+    with col1:
+        result_df.to_excel(output, index=False)
+        st.download_button(
+            label="최적 경로 엑셀 다운로드",
+            data=output.getvalue(),
+            file_name=f"최적경로결과_{file_suffix}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        ) 
